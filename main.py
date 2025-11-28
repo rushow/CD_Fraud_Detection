@@ -31,119 +31,184 @@ from utils.load_data import (
 from utils.evaluation import evaluate_learner
 from utils.visualization import plot_heatmap_auc, plot_multi_dataset_heatmaps
 
-# Create results directory if it doesn't exist
-results_dir = "results"
-if not os.path.exists(results_dir):
-    os.makedirs(results_dir)
-    print(f"Created directory: {results_dir}")
 
-# Define datasets with their loading functions and names
-datasets = [
-    (load_synthetic_financial_data, "Synthetic Financial"),
-    (load_nooha_cc_fraud_data, "Credit Card Fraud"),
-    (load_european_cc_fraud_data, "European CC Fraud"),
-    (load_thomask_cc_fraud_data, "Thomas K CC Fraud"),
-    # (load_bank_transaction_fraud_data, "Bank Transaction Fraud")
-]
 
-# List of models and drift detectors
-models = {
-    'NB': naive_bayes.GaussianNB(),
-    'HT': tree.HoeffdingTreeClassifier()
-}
-
-drift_detectors = {
-    # Statistical-Based Drift Detectors
-    'FTDD': FTDDDriftDetector(), # 2018
-    'RDDM': RDDMDriftDetector(), # 2017
-    'FHDDM': FHDDMDriftDetector(), # 2016 == River
-    'EWMA': EWMADriftDetector(), # 2012
-    'EDDM': EDDMDriftDetector(), # 2006 == River
-    # Window-Based Drift Detectors
-    'KSWIN': KSWINDriftDetector(), #2020 == River
-    'FPDD': FPDDDriftDetector(), # 2018
-    'WSTD': WSTDDriftDetector(), # 2018 
-    'MDDM': MDDMDriftDetector(), #2018
-    'ADWIN': ADWINDriftDetector(), # 2007 == River
-    # Ensemble-Based Drift Detectors
-    'ARF': ARFDriftDetector(), # 2017
-    'D3': D3DriftDetector(), #2015
-    'AUE': AUEDriftDetector(), # 2011
-    'DWM': DWMDriftDetector(), # 2007  
-    'AWE': AWEDriftDetector(), # 2003 
-}
-
-cd_detector_name = ''
-
-# Dictionary to store results for each dataset
-results = {}
-
-# Process each dataset
-for load_func, dataset_name in datasets:
-    print(f"\nProcessing {dataset_name} dataset...")
+def analyze_dataset(dataset_name, X, y):
+    """
+    Analyze dataset statistics
+    """
+    if len(X) == 0 or len(y) == 0:
+        print(f"\n{dataset_name}: ERROR - Dataset is empty")
+        return None
     
-    # Load dataset
-    try:
-        df_name, X, y = load_func()
+    total_rows = len(y)
+    fraud_count = sum(y)
+    legitimate_count = total_rows - fraud_count
+    
+    print(f"\n{dataset_name}:")
+    print(f"  Total Rows: {total_rows}")
+    print(f"  Fraud Cases: {fraud_count} ({fraud_count/total_rows*100:.2f}%)")
+    print(f"  Legitimate Cases: {legitimate_count} ({legitimate_count/total_rows*100:.2f}%)")
+    
+    return {
+        'dataset': dataset_name,
+        'total_rows': total_rows,
+        'fraud_count': fraud_count,
+        'legitimate_count': legitimate_count
+    } 
+
+# Load all datasets
+print("=" * 60)
+print("DATASET ANALYSIS")
+print("=" * 60)
+
+results = []
+
+# Load synthetic financial data
+name, X, y = load_synthetic_financial_data()
+results.append(analyze_dataset(name, X, y))
+
+# Load Nooha CC fraud data
+name, X, y = load_nooha_cc_fraud_data()
+results.append(analyze_dataset(name, X, y))
+
+# Load European CC fraud data
+name, X, y = load_european_cc_fraud_data()
+results.append(analyze_dataset(name, X, y))
+
+# Load thomask CC fraud data
+name, X, y = load_thomask_cc_fraud_data()
+results.append(analyze_dataset(name, X, y))
+
+# Load bank transaction fraud data
+name, X, y = load_bank_transaction_fraud_data()
+results.append(analyze_dataset(name, X, y))
+
+print("\n" + "=" * 60)
+print("SUMMARY")
+print("=" * 60)
+
+# Create summary table
+summary_df = pd.DataFrame([r for r in results if r is not None])
+if not summary_df.empty:
+    print(summary_df.to_string(index=False))
+
+
+
+
+# # Create results directory if it doesn't exist
+# results_dir = "results"
+# if not os.path.exists(results_dir):
+#     os.makedirs(results_dir)
+#     print(f"Created directory: {results_dir}")
+
+# # Define datasets with their loading functions and names
+# datasets = [
+#     (load_synthetic_financial_data, "Synthetic Financial"),
+#     (load_nooha_cc_fraud_data, "Credit Card Fraud"),
+#     (load_european_cc_fraud_data, "European CC Fraud"),
+#     (load_thomask_cc_fraud_data, "Thomas K CC Fraud"),
+#     # (load_bank_transaction_fraud_data, "Bank Transaction Fraud")
+# ]
+
+# # List of models and drift detectors
+# models = {
+#     'NB': naive_bayes.GaussianNB(),
+#     'HT': tree.HoeffdingTreeClassifier()
+# }
+
+# drift_detectors = {
+#     # Statistical-Based Drift Detectors
+#     'FTDD': FTDDDriftDetector(), # 2018
+#     'RDDM': RDDMDriftDetector(), # 2017
+#     'FHDDM': FHDDMDriftDetector(), # 2016 == River
+#     'EWMA': EWMADriftDetector(), # 2012
+#     'EDDM': EDDMDriftDetector(), # 2006 == River
+#     # Window-Based Drift Detectors
+#     'KSWIN': KSWINDriftDetector(), #2020 == River
+#     'FPDD': FPDDDriftDetector(), # 2018
+#     'WSTD': WSTDDriftDetector(), # 2018 
+#     'MDDM': MDDMDriftDetector(), #2018
+#     'ADWIN': ADWINDriftDetector(), # 2007 == River
+#     # Ensemble-Based Drift Detectors
+#     'ARF': ARFDriftDetector(), # 2017
+#     'D3': D3DriftDetector(), #2015
+#     'AUE': AUEDriftDetector(), # 2011
+#     'DWM': DWMDriftDetector(), # 2007  
+#     'AWE': AWEDriftDetector(), # 2003 
+# }
+
+# cd_detector_name = ''
+
+# # Dictionary to store results for each dataset
+# results = {}
+
+# # Process each dataset
+# for load_func, dataset_name in datasets:
+#     print(f"\nProcessing {dataset_name} dataset...")
+    
+#     # Load dataset
+#     try:
+#         df_name, X, y = load_func()
 
         
-        # Limit to 100,000 samples for faster processing
-        sample_size = min(100000, len(X))
-        X = X[:sample_size]
-        y = y[:sample_size]
-        print(f"Using {sample_size} samples from {dataset_name}")
+#         # Limit to 100,000 samples for faster processing
+#         sample_size = min(100000, len(X))
+#         X = X[:sample_size]
+#         y = y[:sample_size]
+#         print(f"Using {sample_size} samples from {dataset_name}")
 
 
-        # Use the entire dataset, no sampling
-        print(f"Using all {len(X)} samples from {dataset_name}")
+#         # Use the entire dataset, no sampling
+#         print(f"Using all {len(X)} samples from {dataset_name}")
         
-        # Initialize storage for this dataset
-        data_auc = {}
+#         # Initialize storage for this dataset
+#         data_auc = {}
         
-        # Run models and detector
-        for model_name, model in models.items():
-            for detector_name, drift_detector in drift_detectors.items():
-                cd_detector_name = detector_name
-                print(f"Running {detector_name} with {model_name}...")
+#         # Run models and detector
+#         for model_name, model in models.items():
+#             for detector_name, drift_detector in drift_detectors.items():
+#                 cd_detector_name = detector_name
+#                 print(f"Running {detector_name} with {model_name}...")
                 
-                # Evaluate the model
-                _, _, metric, metric_f1, metric_precision, auc_value, auroc_value = evaluate_learner(
-                    df_name, model, drift_detector, X, y
-                )
+#                 # Evaluate the model
+#                 _, _, metric, metric_f1, metric_precision, auc_value, auroc_value = evaluate_learner(
+#                     df_name, model, drift_detector, X, y
+#                 )
                 
-                # Store results
-                if model_name not in data_auc:
-                    data_auc[model_name] = {}
-                data_auc[model_name][detector_name] = auc_value
+#                 # Store results
+#                 if model_name not in data_auc:
+#                     data_auc[model_name] = {}
+#                 data_auc[model_name][detector_name] = auc_value
                 
-                # Print metrics
-                print(f"Accuracy: {metric}")
-                print(f"Precision: {metric_precision}")
-                print(f"F1: {metric_f1}")
-                print(f"AUC: {auc_value}")
-                print(f"AUROC: {auroc_value}")
+#                 # Print metrics
+#                 print(f"Accuracy: {metric}")
+#                 print(f"Precision: {metric_precision}")
+#                 print(f"F1: {metric_f1}")
+#                 print(f"AUC: {auc_value}")
+#                 print(f"AUROC: {auroc_value}")
         
-        # Store results for this dataset
-        results[dataset_name] = pd.DataFrame.from_dict(data_auc, orient='index')
+#         # Store results for this dataset
+#         results[dataset_name] = pd.DataFrame.from_dict(data_auc, orient='index')
         
-    except Exception as e:
-        print(f"Error processing {dataset_name}: {str(e)}")
-        continue
+#     except Exception as e:
+#         print(f"Error processing {dataset_name}: {str(e)}")
+#         continue
 
-# Create improved multi-dataset visualization
-try:
-    print("Creating improved multi-dataset visualization...")
-    multi_fig = plot_multi_dataset_heatmaps(
-        results=results,
-        figsize=(18, 14),  # Larger figure size for better spacing
-        cmap="RdYlBu_r",   # Color scheme that differentiates values well
-        wspace=0.3,        # More horizontal space between subplots
-        hspace=0.4,        # More vertical space between subplots
-        save_path=os.path.join(results_dir, "improved_all_datasets_heatmaps.png")
-    )
-    plt.show()
-except Exception as e:
-    print(f"Error creating multi-dataset visualization: {str(e)}")
+# # Create improved multi-dataset visualization
+# try:
+#     print("Creating improved multi-dataset visualization...")
+#     multi_fig = plot_multi_dataset_heatmaps(
+#         results=results,
+#         figsize=(18, 14),  # Larger figure size for better spacing
+#         cmap="RdYlBu_r",   # Color scheme that differentiates values well
+#         wspace=0.3,        # More horizontal space between subplots
+#         hspace=0.4,        # More vertical space between subplots
+#         save_path=os.path.join(results_dir, "improved_all_datasets_heatmaps.png")
+#     )
+#     plt.show()
+# except Exception as e:
+#     print(f"Error creating multi-dataset visualization: {str(e)}")
 
 # Create individual heatmaps for each dataset with enhanced readability
 # for dataset_name, auc_df in results.items():
@@ -200,9 +265,9 @@ except Exception as e:
 #     print(f"Error creating summary heatmap: {str(e)}")
 
 # Print summary statistics
-print("\nSummary Statistics:")
-print("==================")
-for dataset_name, df in results.items():
-    print(f"\n{dataset_name} Dataset:")
-    print(f"Average AUC: {df[cd_detector_name].mean():.3f}")
-    print(f"Std Dev AUC: {df[cd_detector_name].std():.3f}")
+# print("\nSummary Statistics:")
+# print("==================")
+# for dataset_name, df in results.items():
+#     print(f"\n{dataset_name} Dataset:")
+#     print(f"Average AUC: {df[cd_detector_name].mean():.3f}")
+#     print(f"Std Dev AUC: {df[cd_detector_name].std():.3f}")
