@@ -120,9 +120,21 @@ def evaluate_learner(df_name, model, drift_detector, X, y):
         y_proba = model.predict_proba_one(x)  
         model.learn_one(x, y_true)
 
-        # Update the drift detector with x and y_true
-        drift_detector.update(x, y_true)
-        if drift_detector.drift_detected:
+        # Dispatch update arguments based on detector type.
+        # Ensemble-based detectors train internal classifiers and need the raw feature dict.
+        # Error-based detectors only need the scalar prediction vs truth.
+        _det_type = type(drift_detector).__name__
+        _feature_based = {'D3DriftDetector', 'AUEDriftDetector', 'ARFDriftDetector', 'AWEDriftDetector'}
+        if _det_type in _feature_based:
+            drift_result = drift_detector.update(x, y_true)
+        elif _det_type == 'WSTDDriftDetector':
+            drift_result = drift_detector.update(y_true)
+        else:
+            drift_result = drift_detector.update(y_pred, y_true)
+
+        # Some detectors call reset() inside update() which clears drift_detected before
+        # we can read it, so we check both the return value and the attribute.
+        if drift_result == 'drift' or drift_detector.drift_detected:
             model = model.clone()  # Reset the model
 
         # Update metrics

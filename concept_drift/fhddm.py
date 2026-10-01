@@ -2,7 +2,7 @@ import math
 from collections import deque
 
 class FHDDMDriftDetector:
-    def __init__(self, sliding_window_size=20, confidence_level=0.000001, short_window_size=None):
+    def __init__(self, sliding_window_size=50, confidence_level=0.000001, short_window_size=None):
 
         self.sliding_window_size = sliding_window_size
         self.confidence_level = confidence_level

@@ -1,7 +1,7 @@
 import math
 
 class EDDMDriftDetector:
-    def __init__(self, warm_start=30, alpha=0.95, beta=0.9, window_size=20):
+    def __init__(self, warm_start=30, alpha=0.95, beta=0.9, window_size=50):
 
         if alpha < beta:
             raise ValueError("'alpha' must be greater or equal to 'beta'.")
@@ -16,13 +16,16 @@ class EDDMDriftDetector:
         """Reset the EDDM detector"""
         self.drift_detected = False
         self.warning_detected = False
-        
+
         self.n = 0  # Total number of observations
-        
+
+        # Rolling buffer of 2*window_size errors; split into reference and current halves
+        self._error_buffer = []
+
         # Two sliding windows for comparison
-        self.window1 = []  # Reference window
-        self.window2 = []  # Current window
-        
+        self.window1 = []  # Reference window (older half of buffer)
+        self.window2 = []  # Current window (newer half of buffer)
+
         # Track error positions for distance calculation in each window
         self.window1_error_positions = []
         self.window2_error_positions = []
@@ -52,44 +55,34 @@ class EDDMDriftDetector:
         
         return mean_distance, std_distance
 
+    def _positions_from_slice(self, window_slice):
+        """Compute relative error positions from a list of 0/1 error values."""
+        return [i for i, e in enumerate(window_slice) if e == 1]
+
     def update(self, prediction, true_label):
 
         if self.drift_detected:
             self.reset()
-        
-        # Update the sample counter
+
         self.n += 1
-        
-        # Check if there's an error
         error = 1 if prediction != true_label else 0
-        
-        # Add to both windows
-        self.window1.append(error)
-        self.window2.append(error)
-        
-        # Track error positions (relative to window start)
-        if error == 1:
-            self.window1_error_positions.append(len(self.window1) - 1)
-            self.window2_error_positions.append(len(self.window2) - 1)
-        
-        # Remove oldest from window1 if it exceeds size
-        if len(self.window1) > self.window_size:
-            removed_error = self.window1.pop(0)
-            # Adjust error positions and remove if necessary
-            if removed_error == 1 and len(self.window1_error_positions) > 0:
-                self.window1_error_positions.pop(0)
-            # Shift all positions down by 1
-            self.window1_error_positions = [pos - 1 for pos in self.window1_error_positions]
-        
-        # Remove oldest from window2 if it exceeds size
-        if len(self.window2) > self.window_size:
-            removed_error = self.window2.pop(0)
-            # Adjust error positions and remove if necessary
-            if removed_error == 1 and len(self.window2_error_positions) > 0:
-                self.window2_error_positions.pop(0)
-            # Shift all positions down by 1
-            self.window2_error_positions = [pos - 1 for pos in self.window2_error_positions]
-        
+
+        # Maintain a rolling buffer of 2*window_size errors so window1 (older half)
+        # and window2 (newer half) always contain DIFFERENT samples.
+        self._error_buffer.append(error)
+        if len(self._error_buffer) > 2 * self.window_size:
+            self._error_buffer.pop(0)
+
+        if len(self._error_buffer) < 2 * self.window_size:
+            return 'no_drift'
+
+        # Split buffer into reference (older) and current (newer) halves
+        mid = self.window_size
+        self.window1 = self._error_buffer[:mid]
+        self.window2 = self._error_buffer[mid:]
+        self.window1_error_positions = self._positions_from_slice(self.window1)
+        self.window2_error_positions = self._positions_from_slice(self.window2)
+
         # Only proceed if both windows are full
         if len(self.window1) < self.window_size or len(self.window2) < self.window_size:
             return 'no_drift'

@@ -8,7 +8,7 @@ class RDDMDriftDetector:
                  max_concept_size=40000,
                  min_stable_size=7000,
                  warning_limit=1400,
-                 window_size=20):
+                 window_size=50):
         self.min_instances = min_instances
         self.warning_threshold = warning_threshold
         self.drift_threshold = drift_threshold
@@ -24,7 +24,8 @@ class RDDMDriftDetector:
         self.rddm_drift = False
         self.drift_detected = False
         self.warning_detected = False
-        # Two sliding windows for comparison
+        # Rolling buffer of 2*window_size errors; first half = reference, second = current
+        self._error_buffer = []
         self.window1 = []
         self.window2 = []
         self.window1_error_sum = 0
@@ -33,48 +34,40 @@ class RDDMDriftDetector:
     def update(self, prediction, true_label):
         # Calculate error: 1 for incorrect prediction, 0 for correct prediction
         error = 1 if prediction != true_label else 0
-        
+
         self.num_instances += 1
 
-        # Add new error to both windows
-        self.window1.append(error)
-        self.window1_error_sum += error
-        
-        self.window2.append(error)
-        self.window2_error_sum += error
-        
-        # Remove oldest error from window1 if it exceeds size
-        if len(self.window1) > self.window_size:
-            removed_error = self.window1.pop(0)
-            self.window1_error_sum -= removed_error
-        
-        # Remove oldest error from window2 if it exceeds size
-        if len(self.window2) > self.window_size:
-            removed_error = self.window2.pop(0)
-            self.window2_error_sum -= removed_error
-        
-        # Only proceed if both windows are full
-        if len(self.window1) < self.window_size or len(self.window2) < self.window_size:
+        # Maintain a rolling buffer of 2*window_size errors so window1 (older half)
+        # and window2 (newer half) always contain DIFFERENT samples.
+        self._error_buffer.append(error)
+        if len(self._error_buffer) > 2 * self.window_size:
+            self._error_buffer.pop(0)
+
+        # Need a full 2*window_size buffer before comparison
+        if len(self._error_buffer) < 2 * self.window_size:
             return 'no_drift'
-        
+
+        # Split buffer: older half = reference, newer half = current
+        mid = self.window_size
+        self.window1 = self._error_buffer[:mid]
+        self.window2 = self._error_buffer[mid:]
+        self.window1_error_sum = sum(self.window1)
+        self.window2_error_sum = sum(self.window2)
+
         # Calculate statistics for window1 (reference window)
         window1_mean = self.window1_error_sum / len(self.window1)
         if window1_mean > 0 and window1_mean < 1:
             window1_std = math.sqrt(window1_mean * (1 - window1_mean) / len(self.window1))
         else:
             window1_std = 0
-        
+
         # Calculate statistics for window2 (current window)
         window2_mean = self.window2_error_sum / len(self.window2)
         if window2_mean > 0 and window2_mean < 1:
             window2_std = math.sqrt(window2_mean * (1 - window2_mean) / len(self.window2))
         else:
             window2_std = 0
-        
-        # Drift detection: compare window2 statistics against window1
-        window2_plus_std = window2_mean + window2_std
 
-        # Drift detection: compare window2 statistics against window1
         window2_plus_std = window2_mean + window2_std
 
         # Drift detection logic

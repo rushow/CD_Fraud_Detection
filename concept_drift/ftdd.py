@@ -71,11 +71,11 @@ class FTDDStats:
 class FTDDDriftDetector:
  
     def __init__(
-        self, 
-        window_size: int = 20,
+        self,
+        window_size: int = 50,
         p_value_threshold: float = 0.05,
         warning_threshold: float = 0.1,
-        min_window_size: int = 30
+        min_window_size: int = 10,   # must be <= window_size to avoid dead early-check path
     ):
         """
         Initialize the FTDD drift detector.

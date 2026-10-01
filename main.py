@@ -1,3 +1,4 @@
+import copy
 import pandas as pd
 from river import naive_bayes, tree, ensemble, linear_model
 import matplotlib.pyplot as plt
@@ -142,14 +143,14 @@ drift_detectors = {
     # 'FHDDM': FHDDMDriftDetector(), # 2016 == River
     # 'EWMA': EWMADriftDetector(), # 2012
     # 'EDDM': EDDMDriftDetector(), # 2006 == River
-    # # Window-Based Drift Detectors
+    # Window-Based Drift Detectors
     # 'KSWIN': KSWINDriftDetector(), #2020 == River
     # 'FPDD': FPDDDriftDetector(), # 2018
     # 'WSTD': WSTDDriftDetector(), # 2018 
     # 'MDDM': MDDMDriftDetector(), #2018
     # 'ADWIN': ADWINDriftDetector(), # 2007 == River
     # 'D3': D3DriftDetector(), #2015
-    # # Ensemble-Based Drift Detectors
+    # Ensemble-Based Drift Detectors
     'ARF': ARFDriftDetector(), # 2017
     'AUE': AUEDriftDetector(), # 2011
     'DWM': DWMDriftDetector(), # 2007  
@@ -169,16 +170,14 @@ for load_func, dataset_name in datasets:
     try:
         df_name, X, y = load_func()
 
-        
-        # Limit to 100,000 samples for faster processing
-        sample_size = min(100000, len(X))
-        X = X[:sample_size]
-        y = y[:sample_size]
-        print(f"Using {sample_size} samples from {dataset_name}")
-
-
-        # Use the entire dataset, no sampling
-        print(f"Using all {len(X)} samples from {dataset_name}")
+        import numpy as np
+        _y = np.asarray(y)
+        if len(_y) == 0:
+            print(f"  Dataset is empty — skipping")
+            continue
+        _n_fraud = int((_y == 1).sum())
+        _n_legit = int((_y == 0).sum())
+        print(f"  Total: {len(X):,}  |  Fraud: {_n_fraud:,} ({_n_fraud/len(_y)*100:.2f}%)  |  Legitimate: {_n_legit:,}")
         
         # Initialize storage for this dataset
         data_auc = {}
@@ -188,10 +187,14 @@ for load_func, dataset_name in datasets:
             for detector_name, drift_detector in drift_detectors.items():
                 cd_detector_name = detector_name
                 print(f"Running {detector_name} with {model_name}...")
-                
+
+                # Clone fresh instances so state never leaks across runs
+                fresh_model = model.clone()
+                fresh_detector = copy.deepcopy(drift_detector)
+
                 # Evaluate the model
                 _, _, metric, metric_f1, metric_precision, auc_value, auroc_value = evaluate_learner(
-                    df_name, model, drift_detector, X, y
+                    df_name, fresh_model, fresh_detector, X, y
                 )
                 
                 # Store results

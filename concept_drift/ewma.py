@@ -1,7 +1,7 @@
 import math
 
 class EWMADriftDetector:
-    def __init__(self, min_instances=30, lambda_=0.2, window_size=20):
+    def __init__(self, min_instances=30, lambda_=0.2, window_size=50):
 
         self.min_instances = min_instances
         self.lambda_ = lambda_
@@ -14,7 +14,8 @@ class EWMADriftDetector:
         """
         self.num_instances = 0
         self.drift_detected = False
-        # Two sliding windows for comparison
+        # Rolling buffer of 2*window_size errors; first half = reference, second = current
+        self._error_buffer = []
         self.window1 = []
         self.window2 = []
         self.window1_error_sum = 0
@@ -23,39 +24,33 @@ class EWMADriftDetector:
     def update(self, y_pred, y_true):
         """
         Update the EWMA with new prediction result and check for drift.
-        
+
         Parameters:
         - y_pred: Predicted value (binary).
         - y_true: True value (binary).
-        
+
         Returns:
         - 'drift' if drift is detected, 'no_drift' otherwise.
         """
-        # Convert prediction correctness to binary (1 for incorrect, 0 for correct)
         error = 1 if y_pred != y_true else 0
-        
+
         self.num_instances += 1
 
-        # Add new error to both windows
-        self.window1.append(error)
-        self.window1_error_sum += error
-        
-        self.window2.append(error)
-        self.window2_error_sum += error
-        
-        # Remove oldest error from window1 if it exceeds size
-        if len(self.window1) > self.window_size:
-            removed_error = self.window1.pop(0)
-            self.window1_error_sum -= removed_error
-        
-        # Remove oldest error from window2 if it exceeds size
-        if len(self.window2) > self.window_size:
-            removed_error = self.window2.pop(0)
-            self.window2_error_sum -= removed_error
-        
-        # Only proceed if both windows are full
-        if len(self.window1) < self.window_size or len(self.window2) < self.window_size:
+        # Maintain a rolling buffer so window1 (older half) and window2 (newer half)
+        # always contain DIFFERENT samples.
+        self._error_buffer.append(error)
+        if len(self._error_buffer) > 2 * self.window_size:
+            self._error_buffer.pop(0)
+
+        if len(self._error_buffer) < 2 * self.window_size:
             return 'no_drift'
+
+        # Split buffer: older half = reference, newer half = current
+        mid = self.window_size
+        self.window1 = self._error_buffer[:mid]
+        self.window2 = self._error_buffer[mid:]
+        self.window1_error_sum = sum(self.window1)
+        self.window2_error_sum = sum(self.window2)
         
         # Calculate statistics for window1 (reference window)
         window1_p = self.window1_error_sum / len(self.window1)
