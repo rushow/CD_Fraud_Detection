@@ -72,7 +72,7 @@ class FTDDDriftDetector:
  
     def __init__(
         self, 
-        window_size: int = 100,
+        window_size: int = 20,
         p_value_threshold: float = 0.05,
         warning_threshold: float = 0.1,
         min_window_size: int = 30

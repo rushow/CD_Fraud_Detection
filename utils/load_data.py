@@ -188,59 +188,261 @@ def load_thomask_cc_fraud_data():
         print(f"Error loading thomask CC fraud data: {str(e)}")
         return "thomask_cc_fraud", [], []
 
-def load_bank_transaction_fraud_data():
-    """
-    Load the Bank Transaction Fraud Dataset
-    """
-    try:
-        # Load from Hugging Face
-        dataset = load_dataset("qppd/bank-transaction-fraud", split="train")
+# def load_bank_transaction_fraud_data():
+#     """
+#     Load the Bank Transaction Fraud Dataset
+#     """
+#     try:
+#         # Load from Hugging Face
+#         dataset = load_dataset("qppd/bank-transaction-fraud", split="train")
         
-        # Convert to pandas DataFrame
-        df = pd.DataFrame(dataset)
+#         # Convert to pandas DataFrame
+#         df = pd.DataFrame(dataset)
         
-        # Identify target column
-        if 'is_fraud' in df.columns:
-            target_col = 'is_fraud'
-        elif 'fraud' in df.columns:
-            target_col = 'fraud'
-        elif 'isFraud' in df.columns:
-            target_col = 'isFraud'
-        else:
-            # Find binary column that's likely to be the target
-            for col in df.columns:
-                if df[col].nunique() == 2 and df[col].dtype in ['int64', 'int32', 'bool']:
-                    target_col = col
-                    break
-            else:
-                target_col = df.columns[-1]  # Default to last column
+#         # Identify target column
+#         if 'is_fraud' in df.columns:
+#             target_col = 'is_fraud'
+#         elif 'fraud' in df.columns:
+#             target_col = 'fraud'
+#         elif 'isFraud' in df.columns:
+#             target_col = 'isFraud'
+#         else:
+#             # Find binary column that's likely to be the target
+#             for col in df.columns:
+#                 if df[col].nunique() == 2 and df[col].dtype in ['int64', 'int32', 'bool']:
+#                     target_col = col
+#                     break
+#             else:
+#                 target_col = df.columns[-1]  # Default to last column
         
-        # Exclude target from features
-        feature_cols = [col for col in df.columns if col != target_col]
+#         # Exclude target from features
+#         feature_cols = [col for col in df.columns if col != target_col]
         
-        # Prepare features
-        X = df[feature_cols].copy()
+#         # Prepare features
+#         X = df[feature_cols].copy()
         
-        # Handle categorical variables
-        categorical_cols = X.select_dtypes(include=['object']).columns
-        for col in categorical_cols:
-            le = LabelEncoder()
-            X[col] = le.fit_transform(X[col].astype(str))
+#         # Handle categorical variables
+#         categorical_cols = X.select_dtypes(include=['object']).columns
+#         for col in categorical_cols:
+#             le = LabelEncoder()
+#             X[col] = le.fit_transform(X[col].astype(str))
         
-        # Fill NaN values
-        X = X.fillna(X.mean())
+#         # Fill NaN values
+#         X = X.fillna(X.mean())
         
-        # Convert to dictionary format for River
-        X = X.to_dict(orient='records')
+#         # Convert to dictionary format for River
+#         X = X.to_dict(orient='records')
         
-        # Get target variable
-        y = df[target_col].values
+#         # Get target variable
+#         y = df[target_col].values
         
-        return "bank_transaction_fraud", X, y
+#         return "bank_transaction_fraud", X, y
     
-    except Exception as e:
-        print(f"Error loading bank transaction fraud data: {str(e)}")
-        return "bank_transaction_fraud", [], []
+#     except Exception as e:
+#         print(f"Error loading bank transaction fraud data: {str(e)}")
+#         return "bank_transaction_fraud", [], []
+
+# def load_cifer_fraud_detection_data():
+#     """
+#     Load the Cifer Fraud Detection Dataset (AF)
+#     """
+#     try:
+#         dataset = load_dataset("CiferAI/Cifer-Fraud-Detection-Dataset-AF", split="train")
+
+#         df = pd.DataFrame(dataset)
+
+#         target_col = None
+#         preferred_targets = [
+#             "label",
+#             "Class",
+#             "class",
+#             "isFraud",
+#             "is_fraud",
+#             "fraud",
+#             "target",
+#             "y",
+#         ]
+#         for col in preferred_targets:
+#             if col in df.columns:
+#                 target_col = col
+#                 break
+
+#         if target_col is None:
+#             for col in df.columns:
+#                 if df[col].nunique() == 2 and df[col].dtype in [
+#                     "int64",
+#                     "int32",
+#                     "int16",
+#                     "int8",
+#                     "uint8",
+#                     "bool",
+#                 ]:
+#                     target_col = col
+#                     break
+
+#         if target_col is None:
+#             target_col = df.columns[-1]
+
+#         feature_cols = [col for col in df.columns if col != target_col]
+
+#         X = df[feature_cols].copy()
+
+#         categorical_cols = X.select_dtypes(include=["object"]).columns
+#         for col in categorical_cols:
+#             le = LabelEncoder()
+#             X[col] = le.fit_transform(X[col].astype(str))
+
+#         numeric_cols = X.select_dtypes(include=["number"]).columns
+#         if len(numeric_cols) > 0:
+#             X[numeric_cols] = X[numeric_cols].fillna(X[numeric_cols].mean())
+
+#         X = X.fillna(0)
+
+#         X = X.to_dict(orient="records")
+
+#         y = df[target_col].values
+
+#         return "cifer_fraud_detection_af", X, y
+
+#     except Exception as e:
+#         print(f"Error loading Cifer fraud detection data: {str(e)}")
+#         return "cifer_fraud_detection_af", [], []
+
+# def load_nigerian_financial_fraud_data():
+#     """
+#     Load the Nigerian Financial Transactions and Fraud Detection Dataset
+#     """
+#     try:
+#         dataset = load_dataset(
+#             "electricsheepafrica/Nigerian-Financial-Transactions-and-Fraud-Detection-Dataset",
+#             split="train",
+#         )
+
+#         df = pd.DataFrame(dataset)
+
+#         target_col = None
+#         preferred_targets = [
+#             "label",
+#             "Class",
+#             "class",
+#             "isFraud",
+#             "is_fraud",
+#             "fraud",
+#             "target",
+#             "y",
+#         ]
+#         for col in preferred_targets:
+#             if col in df.columns:
+#                 target_col = col
+#                 break
+
+#         if target_col is None:
+#             for col in df.columns:
+#                 if df[col].nunique() == 2 and df[col].dtype in [
+#                     "int64",
+#                     "int32",
+#                     "int16",
+#                     "int8",
+#                     "uint8",
+#                     "bool",
+#                 ]:
+#                     target_col = col
+#                     break
+
+#         if target_col is None:
+#             target_col = df.columns[-1]
+
+#         feature_cols = [col for col in df.columns if col != target_col]
+
+#         X = df[feature_cols].copy()
+
+#         categorical_cols = X.select_dtypes(include=["object"]).columns
+#         for col in categorical_cols:
+#             le = LabelEncoder()
+#             X[col] = le.fit_transform(X[col].astype(str))
+
+#         numeric_cols = X.select_dtypes(include=["number"]).columns
+#         if len(numeric_cols) > 0:
+#             X[numeric_cols] = X[numeric_cols].fillna(X[numeric_cols].mean())
+
+#         X = X.fillna(0)
+
+#         X = X.to_dict(orient="records")
+
+#         y = df[target_col].values
+
+#         return "nigerian_financial_fraud", X, y
+
+#     except Exception as e:
+#         print(f"Error loading Nigerian financial fraud data: {str(e)}")
+#         return "nigerian_financial_fraud", [], []
+
+# def load_amitkedia_financial_fraud_data():
+#     """
+#     Load the Financial Fraud Dataset by amitkedia
+#     """
+#     try:
+#         dataset = load_dataset("amitkedia/Financial-Fraud-Dataset", split="train")
+
+#         df = pd.DataFrame(dataset)
+
+#         target_col = None
+#         preferred_targets = [
+#             "label",
+#             "Class",
+#             "class",
+#             "isFraud",
+#             "is_fraud",
+#             "fraud",
+#             "target",
+#             "y",
+#         ]
+#         for col in preferred_targets:
+#             if col in df.columns:
+#                 target_col = col
+#                 break
+
+#         if target_col is None:
+#             for col in df.columns:
+#                 if df[col].nunique() == 2 and df[col].dtype in [
+#                     "int64",
+#                     "int32",
+#                     "int16",
+#                     "int8",
+#                     "uint8",
+#                     "bool",
+#                 ]:
+#                     target_col = col
+#                     break
+
+#         if target_col is None:
+#             target_col = df.columns[-1]
+
+#         feature_cols = [col for col in df.columns if col != target_col]
+
+#         X = df[feature_cols].copy()
+
+#         categorical_cols = X.select_dtypes(include=["object"]).columns
+#         for col in categorical_cols:
+#             le = LabelEncoder()
+#             X[col] = le.fit_transform(X[col].astype(str))
+
+#         numeric_cols = X.select_dtypes(include=["number"]).columns
+#         if len(numeric_cols) > 0:
+#             X[numeric_cols] = X[numeric_cols].fillna(X[numeric_cols].mean())
+
+#         X = X.fillna(0)
+
+#         X = X.to_dict(orient="records")
+
+#         y = df[target_col].values
+
+#         return "amitkedia_financial_fraud", X, y
+
+#     except Exception as e:
+#         print(f"Error loading amitkedia financial fraud data: {str(e)}")
+#         return "amitkedia_financial_fraud", [], []
+
 
 # Helper function to subsample data for faster processing
 def subsample_data(X, y, max_samples=10000, random_state=42):
